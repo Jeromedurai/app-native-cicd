@@ -1,0 +1,164 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>CICD Application</title>
+    <link rel="shortcut icon" type="image/x-icon" href="https://cdn.toasttab.com/static/42fd6cabe2aa1dc8ad50e0d66f30ce9e3de4aa36/images/favicon.ico">
+    <script src="https://cdn.jsdelivr.net/npm/regenerator-runtime@0.13.7/runtime.min.js"></script>
+    <!-- Razorpay Checkout Script - Required for payment processing -->
+    <!-- Load synchronously to ensure it's available when React app needs it -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <meta name="importmap-type" content="systemjs-importmap" />
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/single-spa@5.9.0/lib/system/single-spa.min.js" as="script">
+    
+    @* Set API base URL for React app - must be set before React app loads *@
+    @inject IConfiguration Configuration
+    <script>
+        // Set API base URL for the React app to use the correct API endpoint
+        // This ensures API calls go to the configured API URL instead of the CICD app URL
+        (function() {
+            const API_BASE_URL = '@(Configuration["ApiBaseUrl"] ?? "https://localhost:5002")';
+            
+            // Set ApiBaseUrl if not already set
+            if (!localStorage.getItem('ApiBaseUrl')) {
+                localStorage.setItem('ApiBaseUrl', API_BASE_URL);
+            }
+            
+            // Set AppBaseUrl if not already set (used by rest_client.ts)
+            if (!localStorage.getItem('AppBaseUrl')) {
+                localStorage.setItem('AppBaseUrl', API_BASE_URL);
+            }
+            
+            // Set ContainerApiBaseUrl if not already set (used for tenant API calls)
+            if (!localStorage.getItem('ContainerApiBaseUrl')) {
+                localStorage.setItem('ContainerApiBaseUrl', API_BASE_URL + '/');
+            }
+            
+            console.log('API Base URLs configured:', {
+                ApiBaseUrl: localStorage.getItem('ApiBaseUrl'),
+                AppBaseUrl: localStorage.getItem('AppBaseUrl'),
+                ContainerApiBaseUrl: localStorage.getItem('ContainerApiBaseUrl')
+            });
+        })();
+    </script>
+
+    @if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+    {
+        @* LOCAL DEVELOPMENT: Load React SPA from local build (wwwroot/spa) - Built with Vite *@
+        <link href="/spa/main.css" rel="stylesheet" type="text/css" onerror="this.remove()" />
+        <script type="systemjs-importmap">
+            {
+                "imports": {
+                    "single-spa": "https://cdn.jsdelivr.net/npm/single-spa@5.9.0/lib/system/single-spa.min.js",
+                    "@@app-native/seed-spa": "/spa/bundle.js"
+                }
+            }
+        </script>
+    }
+    else
+    {
+        @* PRODUCTION: Load React SPA from CDN/remote server *@
+        <link href="https://cdn.toasttab.com/static/83a374273c7a73c0c431288ca569a35292e9bd6d/projects/tailwindcss/preflight.min.css" rel="stylesheet" type="text/css" />
+        <script type="systemjs-importmap">
+            {
+                "imports": {
+                    "single-spa": "https://cdn.jsdelivr.net/npm/single-spa@5.9.0/lib/system/single-spa.min.js",
+                    "react": "https://unpkg.com/@@esm-bundle/react@16.14.0/system/react.production.min.js",
+                    "react-dom": "https://unpkg.com/@@esm-bundle/react-dom@16.14.0/system/react-dom.production.min.js",
+                    "sa-toast/root-config": "https://tastings.sa.toasttab.com/sa-cicd-root/sa-toast-root-config.js",
+                    "sa-cicd": "https://tastings.sa.toasttab.com/cicd-spa/bundle.js"
+                }
+            }
+        </script>
+    }
+
+    <script src="https://cdn.jsdelivr.net/npm/import-map-overrides@2.2.0/dist/import-map-overrides.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/systemjs@6.8.3/dist/system.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/systemjs@6.8.3/dist/extras/amd.min.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GP7H0GP0JL"></script>
+    
+    @* Authentication session storage (uncomment when auth is implemented)
+    @if (User.Identity.IsAuthenticated)
+    {
+        <script>
+            sessionStorage.setItem("isLoginSuccess", "isSuccess");
+            sessionStorage.setItem("userRole", '@ViewData["userRole"]');
+            sessionStorage.setItem("user", '@ViewData["user"]');
+            sessionStorage.setItem("systemToken", '@ViewData["systemToken"]');
+        </script>
+    }
+    else
+    {
+        <script>sessionStorage.clear();</script>
+    }
+    *@
+</head>
+<body>
+    <div id="single-spa-application:@@app-native/seed-spa"></div>
+    
+    @if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+    {
+        @* LOCAL: Mount the app directly *@
+        <script>
+            // Wait for SystemJS to be ready
+            (function() {
+                function loadApp() {
+                    if (typeof System === 'undefined') {
+                        setTimeout(loadApp, 100);
+                        return;
+                    }
+                    
+                    System.import('@@app-native/seed-spa').then(function(app) {
+                        console.log('SPA loaded:', app);
+                        // For local development, mount immediately
+                        if (app && (app.bootstrap || app.mount)) {
+                            var domElement = document.getElementById('single-spa-application:@@app-native/seed-spa');
+                            if (!domElement) {
+                                console.error('DOM element not found');
+                                return;
+                            }
+                            
+                            var props = { 
+                                name: '@@app-native/seed-spa',
+                                domElement: domElement
+                            };
+                            
+                            if (app.bootstrap) {
+                                app.bootstrap(props).then(function() {
+                                    if (app.mount) {
+                                        app.mount(props);
+                                    }
+                                }).catch(function(err) {
+                                    console.error('Bootstrap failed:', err);
+                                });
+                            } else if (app.mount) {
+                                app.mount(props);
+                            }
+                        } else {
+                            console.error('Invalid app exports:', app);
+                        }
+                    }).catch(function(err) {
+                        console.error('Failed to load SPA:', err);
+                        console.error('Error details:', err.message, err.stack);
+                        var errorDiv = document.createElement('div');
+                        errorDiv.style.cssText = 'padding: 20px; color: red; background: #fee; border: 1px solid red; margin: 20px;';
+                        errorDiv.innerHTML = '<strong>Failed to load application.</strong><br>Error: ' + (err.message || err) + '<br>Make sure to run "npm run build:local" in app-native-seed.';
+                        document.body.insertBefore(errorDiv, document.body.firstChild);
+                    });
+                }
+                loadApp();
+            })();
+        </script>
+    }
+    else
+    {
+        @* PRODUCTION: Use single-spa root config *@
+        <script>System.import("sa-toast/root-config")</script>
+    }
+    
+    @RenderBody()
+    <import-map-overrides-full show-when-local-storage="devtools" dev-libs></import-map-overrides-full>
+</body>
+</html>

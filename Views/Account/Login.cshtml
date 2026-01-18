@@ -1,0 +1,66 @@
+﻿@model CICD.Models.Login;
+@using CICD.Utils;
+
+@{
+    ViewData["Title"] = "Login";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - CICD</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/CICD.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="divForm">
+        <section class="sectionForm">
+            <img class="alogo" id="prompt-logo-center" src="https://cdn.toasttab.com/static/19af6b673996d663903a4cf872baa27dbc0e8f9d/images/toast_logo.png" alt="[Production] SA Toast">
+            <br />
+            <br />
+            <h1 class="welcom-label">@Constants.WELCOME_LABEL</h1>
+            <div>
+                <p class="login-user-label">@Constants.LOGIN_HEADER_LABEL</p>
+            </div>
+            <form class="form" asp-controller="Account" asp-action="Login" method="post">
+                <div>
+                    <div class="user-input-wrp">
+                        <br />
+                        <input autofocus #email name="UserName" type="text" class="inputText" required />
+                        <label class='floating-label'>@Constants.USER_NAME_LABEL</label>
+                    </div>
+                    <div class="user-input-wrp">
+                        <br />
+                        <input #password name="Password" type="password" class="inputText" required />
+                        <label class='floating-label'>@Constants.PASSWORD_LABEL</label>
+                    </div>
+                </div>
+                <div>
+                    <input type="checkbox" asp-for="KeepLoginIn" />
+                    <label class="form-check-label">
+                        @Constants.KEEP_LOGGED_LABEL
+                    </label>
+                </div>
+                @if (ViewData["ValidateMessage"] != null)
+                {
+                    <label class="invalidLoginMessage">@ViewData["ValidateMessage"]</label>
+                }
+                <div class="user-input-wrp">
+                    <br />
+                    <a><input type="submit" value="@Constants.LOGIN_LABEL"></a>
+                </div>
+            </form>
+            @if (ViewData["ValidateMessage"] != null)
+            {
+                <br />
+                <br />
+            }
+        </section>
+    </div>
+</body>
+</html>
+
+
